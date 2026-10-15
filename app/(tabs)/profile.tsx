@@ -17,6 +17,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { db } from '../../FirebaseConfig';
 import colors from '../../constants/colors';
+import { clearSession } from '../../lib/session';
 
 interface PersonalInfo {
   firstname: string;
@@ -211,15 +212,17 @@ export default function Profile() {
     if (!result.canceled) setProfileImage(result.assets[0].uri);
   };
 
+  const doLogout = async () => { await clearSession(); router.replace('/login'); };
+
   const handleLogout = () => {
     if (Platform.OS === 'web') {
       if (typeof window !== 'undefined' && window.confirm('Are you sure you want to sign out?')) {
-        router.replace('/login');
+        doLogout();
       }
     } else {
       Alert.alert('Sign Out', 'Are you sure?', [
         { text: 'Cancel', style: 'cancel' },
-        { text: 'Sign Out', style: 'destructive', onPress: () => router.replace('/login') },
+        { text: 'Sign Out', style: 'destructive', onPress: doLogout },
       ]);
     }
   };

@@ -16,6 +16,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { db } from '../FirebaseConfig';
 import colors from '../constants/colors';
+import { saveSession } from '../lib/session';
 
 export default function Login() {
   const [uid, setUid] = useState('');
@@ -34,6 +35,7 @@ export default function Login() {
       const userRef = ref(db, `Customers/${uid.trim()}/personal_info`);
       const snapshot = await get(userRef);
       if (snapshot.exists()) {
+        await saveSession(uid.trim());
         router.replace({ pathname: '/(tabs)', params: { uid: uid.trim() } });
       } else {
         setError('Member ID not found. Please check and try again.');

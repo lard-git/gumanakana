@@ -1,10 +1,10 @@
 import { Feather, MaterialIcons } from '@expo/vector-icons';
-import { router, useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
 import { onValue, ref } from 'firebase/database';
 import { useEffect, useRef, useState } from 'react';
 import {
   Animated,
-  Modal,
+  BackHandler,
   Platform,
   ScrollView,
   StyleSheet,
@@ -17,6 +17,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { db } from '../../FirebaseConfig';
 
 import colors from '../../constants/colors';
+import { useSecureScreen } from '../../lib/useSecureScreen';
 
 interface MembershipData {
   end_date: string;
@@ -40,6 +41,7 @@ interface PersonalInfo {
 }
 
 function QRModal({ uid, onClose }: { uid: string; onClose: () => void }) {
+  useSecureScreen('member-qr'); // no screenshots / screen recording while the QR is on screen
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(0.9)).current;
 
@@ -120,6 +122,13 @@ export default function Home() {
 
     return () => { unsubM(); unsubG(); unsubP(); unsubA(); };
   }, [uid]);
+
+  // Android back button closes the QR first
+  useEffect(() => {
+    if (!showQR) return;
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => { setShowQR(false); return true; });
+    return () => sub.remove();
+  }, [showQR]);
 
   const formatTime = (m: number) => `${Math.floor(m / 60)}h ${m % 60}m`;
 
@@ -233,37 +242,13 @@ export default function Home() {
             </View>
           </View>
         </View>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Quick Actions</Text>
-          <View style={styles.actionsGrid}>
-            <TouchableOpacity style={styles.actionCard} onPress={() => setShowQR(true)} activeOpacity={0.8}>
-              <View style={[styles.actionIcon, { backgroundColor: 'rgba(235,192,105,0.1)' }]}>
-                <MaterialIcons name="qr-code-scanner" size={26} color={colors.light.primary} />
-              </View>
-              <Text style={styles.actionLabel}>My QR</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.actionCard} onPress={() => router.push({ pathname: '/(tabs)/planner', params: { uid } })} activeOpacity={0.8}>
-              <View style={[styles.actionIcon, { backgroundColor: 'rgba(29,185,84,0.1)' }]}>
-                <MaterialIcons name="fitness-center" size={26} color={colors.light.success} />
-              </View>
-              <Text style={styles.actionLabel}>Planner</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.actionCard} onPress={() => router.push({ pathname: '/(tabs)/profile', params: { uid } })} activeOpacity={0.8}>
-              <View style={[styles.actionIcon, { backgroundColor: 'rgba(180,120,255,0.1)' }]}>
-                <MaterialIcons name="person" size={26} color="#b47fff" />
-              </View>
-              <Text style={styles.actionLabel}>Profile</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
       </ScrollView>
 
-      <Modal visible={showQR} transparent animationType="none" onRequestClose={() => setShowQR(false)}>
-        <QRModal uid={uid as string} onClose={() => setShowQR(false)} />
-      </Modal>
-
-      
+      {showQR && (
+        <View style={StyleSheet.absoluteFill}>
+          <QRModal uid={uid as string} onClose={() => setShowQR(false)} />
+        </View>
+      )}
     </>
   );
 }
@@ -311,8 +296,4 @@ const styles = StyleSheet.create({
   warnBannerWarn: { backgroundColor: 'rgba(235,192,105,0.1)', borderColor: 'rgba(235,192,105,0.3)' },
   warnTitle: { fontSize: 14, fontWeight: '700', marginBottom: 2 },
   warnSub: { fontSize: 12, color: colors.light.mutedForeground, lineHeight: 17 },
-  actionsGrid: { flexDirection: 'row', gap: 12 },
-  actionCard: { flex: 1, backgroundColor: colors.light.card, borderRadius: 14, padding: 16, alignItems: 'center', borderWidth: 1, borderColor: colors.light.border },
-  actionIcon: { width: 52, height: 52, borderRadius: 14, justifyContent: 'center', alignItems: 'center', marginBottom: 10 },
-  actionLabel: { fontSize: 13, fontWeight: '600', color: colors.light.gray700 },
 });
